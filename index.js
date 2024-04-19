@@ -93,7 +93,11 @@ app.post("/api/users/:_id/exercises", (req, res) => {
   var id = req.params._id;
   var description = req.body.description;
   var duration = +req.body.duration;
-  var date = new Date(req.body.date).toDateString();
+  var now = Date.now();
+  var date = new Date(now).toDateString();
+  if(req.body.date != undefined) {
+    date = new Date(req.body.date).toDateString();
+  }
   
   var exerciseObj = {
     description: description,
@@ -105,10 +109,11 @@ app.post("/api/users/:_id/exercises", (req, res) => {
     user.log.push(exerciseObj);
     user.count++;
     user.save( (err, data) => {
-      if(err) res.json({error: 'Exercise not registered. Please try again.'});
-      res.json({_id: user._id, username: user.username, date: exerciseObj.date, duration: exerciseObj.duration, description: exerciseObj.description});
+      if(err) res.json({error: 'Exercises not registered. Please try again.'});
+      res.json({_id: data._id, username: data.username, date: exerciseObj.date, duration: exerciseObj.duration, description: exerciseObj.description});
     });
   });
+  
 });
 
 
@@ -119,45 +124,44 @@ app.get("/api/users/:_id/logs", (req, res) => {
   var to = new Date(req.query.to);
   var limit = +req.query.limit;
 
-  console.log(Date.parse(to));
-
   User.findById(id).then( (user) => {
+    console.log(user);
     var userLogs = user.log;
     var filtered = false;
     var filteredLogs;
     if(!isNaN(Date.parse(from)) || !isNaN(Date.parse(to))) {
       if(!isNaN(Date.parse(from))) {
         if(!isNaN(Date.parse(to))) {
-          filteredLogs = userLogs.filter(l => Date.parse(to) <= Date.parse(l.date) && Date.parse(l.date) >= Date.parse(from));
-          console.log(filteredLogs);
+          filteredLogs = userLogs.filter(l => (Date.parse(to) >= Date.parse(l.date) && Date.parse(l.date) >= Date.parse(from)));
           filtered = true;
         } else {
           filteredLogs = userLogs.filter(l => Date.parse(l.date) >= Date.parse(from));
-          console.log(filteredLogs);
           filtered = true;
         }
       } else {
-        filteredLogs = userLogs.filter(l => Date.parse(to) <= Date.parse(l.date));
-        console.log(filteredLogs);
+        filteredLogs = userLogs.filter(l => Date.parse(to) >= Date.parse(l.date));
         filtered = true;
       }
     };
 
     if(!isNaN(limit)) {
       if(filtered) {
+        console.log("filtered logs will be limited");
         filteredLogs.length = limit;
-        console.log(filteredLogs);
       } else {
+        console.log("user logs will be limited");
         userLogs.length = limit;
-        console.log(userLogs);
       }
     };
 
     if(filtered) {
-      res.json({_id: id, username: user.username, count: user.count, logs: filteredLogs});
+      console.log("filtered logs");
+      console.log(filteredLogs);
+      res.json({_id: id, username: user.username, count: user.count, log: filteredLogs});
     } else {
-      res.json({_id: id, username: user.username, count: user.count, logs: userLogs});
+      console.log("user logs");
+      console.log(userLogs);
+      res.json({_id: id, username: user.username, count: user.count, log: userLogs});
     };
   })
 });
-
